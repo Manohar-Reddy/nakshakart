@@ -6,7 +6,8 @@ import Footer from "./components/Footer";
 export default async function HomePage() {
   const { data: plans, error } = await supabase
     .from("plans")
-    .select("*");
+    .select("*")
+    .eq("status", "approved");
 
   if (error) {
     return <p className="p-8 text-red-500">Failed to load plans.</p>;
@@ -62,8 +63,10 @@ export default async function HomePage() {
         {/* Plans Grid */}
         <section className="max-w-7xl mx-auto px-6 py-10">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">All Plans</h2>
-            <span className="text-sm text-gray-500">{plans.length} plans found</span>
+            <h2 className="text-2xl font-bold text-gray-800">Featured Plans</h2>
+            <Link href="/browse" className="text-teal-600 hover:underline text-sm font-medium">
+              View All Plans →
+            </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {plans.map((plan) => (
@@ -102,9 +105,9 @@ export default async function HomePage() {
         <section className="bg-gradient-to-r from-teal-700 to-teal-600 text-white py-10 px-8 text-center mt-8">
           <h2 className="text-2xl font-bold mb-2">Are you an Architect?</h2>
           <p className="text-teal-200 mb-6">Join NakshaKart and sell your house plans to thousands of customers</p>
-          <button className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-3 rounded-full shadow-lg transition">
+          <Link href="/signup" className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-3 rounded-full shadow-lg transition">
             Join as Architect →
-          </button>
+          </Link>
         </section>
 
       </main>
