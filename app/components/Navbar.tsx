@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string>("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export default function Navbar() {
   const getDashboardLink = () => {
     if (role === "admin" || role === "superadmin") return "/admin/dashboard";
     if (role === "architect") return "/architect/dashboard";
-    return "/";
+    return "/my-purchases";
   };
 
   return (
@@ -75,6 +76,14 @@ export default function Navbar() {
             <span className="text-sm text-gray-600">
               👋 {user.user_metadata?.full_name?.split(" ")[0] || "User"}
             </span>
+            {role === "customer" && (
+              <Link
+                href="/my-purchases"
+                className="border-2 border-orange-500 text-orange-500 hover:bg-orange-50 px-4 py-2 rounded-full text-sm font-medium transition"
+              >
+                My Purchases
+              </Link>
+            )}
             <Link
               href={getDashboardLink()}
               className="border-2 border-teal-600 text-teal-600 hover:bg-teal-50 px-4 py-2 rounded-full text-sm font-medium transition"
