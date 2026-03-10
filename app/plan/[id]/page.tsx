@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
+import ReviewSection from "../../components/ReviewSection";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -20,16 +21,21 @@ export default async function PlanDetailPage({ params }: PageProps) {
     return <p className="p-8 text-red-500">Plan not found.</p>;
   }
 
-  // Fetch architect details if architect_id exists
   let architect = null;
   if (plan.architect_id) {
-    const { data } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", plan.architect_id)
-      .single();
+    const { data } = await supabase.from("users").select("*").eq("id", plan.architect_id).single();
     architect = data;
   }
+
+  const { data: reviews } = await supabase
+    .from("reviews")
+    .select("*")
+    .eq("plan_id", id)
+    .order("created_at", { ascending: false });
+
+  const avgRating = reviews && reviews.length > 0
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : null;
 
   return (
     <>
@@ -41,7 +47,6 @@ export default async function PlanDetailPage({ params }: PageProps) {
           </Link>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
             {/* Left - Image */}
             <div>
               {plan.image_url ? (
@@ -52,14 +57,12 @@ export default async function PlanDetailPage({ params }: PageProps) {
                 </div>
               )}
 
-              {/* Tags */}
               <div className="flex flex-wrap gap-2 mt-4">
                 {plan.is_vastu_compliant && <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-semibold">🕉️ Vastu Compliant</span>}
                 {plan.is_green_building && <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">🌿 Green Building</span>}
                 {plan.is_solar_ready && <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">☀️ Solar Ready</span>}
               </div>
 
-              {/* Architect Card */}
               {architect && (
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mt-4">
                   <p className="text-xs text-gray-500 mb-3 font-semibold uppercase tracking-wide">Designed By</p>
@@ -73,10 +76,7 @@ export default async function PlanDetailPage({ params }: PageProps) {
                       {architect.location && <p className="text-gray-500 text-xs">📍 {architect.location}</p>}
                     </div>
                   </div>
-                  <Link
-                    href={`/architect-profile/${plan.architect_id}`}
-                    className="block text-center mt-3 border border-teal-600 text-teal-600 hover:bg-teal-600 hover:text-white py-2 rounded-lg text-sm font-semibold transition"
-                  >
+                  <Link href={`/architect-profile/${plan.architect_id}`} className="block text-center mt-3 border border-teal-600 text-teal-600 hover:bg-teal-600 hover:text-white py-2 rounded-lg text-sm font-semibold transition">
                     View Architect Profile
                   </Link>
                 </div>
@@ -85,10 +85,21 @@ export default async function PlanDetailPage({ params }: PageProps) {
 
             {/* Right - Details */}
             <div>
-              <div className="flex items-start justify-between mb-2">
-                <h1 className="text-2xl font-bold text-gray-800">{plan.title}</h1>
-              </div>
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">{plan.title}</h1>
               {plan.category && <span className="bg-teal-100 text-teal-700 px-3 py-1 rounded-full text-xs font-semibold">{plan.category}</span>}
+
+              {/* Rating Summary */}
+              {avgRating && (
+                <div className="flex items-center gap-2 mt-3">
+                  <div className="flex">
+                    {[1,2,3,4,5].map((star) => (
+                      <span key={star} className={`text-lg ${star <= Math.round(parseFloat(avgRating)) ? "text-yellow-400" : "text-gray-300"}`}>★</span>
+                    ))}
+                  </div>
+                  <span className="font-bold text-gray-800">{avgRating}</span>
+                  <span className="text-gray-500 text-sm">({reviews?.length} reviews)</span>
+                </div>
+              )}
 
               <p className="text-3xl font-bold text-orange-500 mt-4">₹{plan.price}</p>
               <p className="text-green-600 text-sm mt-1">✅ Architect Verified · Instant download after purchase</p>
@@ -97,10 +108,7 @@ export default async function PlanDetailPage({ params }: PageProps) {
                 <p className="text-gray-600 text-sm mt-4 leading-relaxed">{plan.description}</p>
               )}
 
-              <Link
-                href={`/buy/${plan.id}`}
-                className="block text-center bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-lg transition shadow-lg mt-6"
-              >
+              <Link href={`/buy/${plan.id}`} className="block text-center bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-lg transition shadow-lg mt-6">
                 Buy Plan ₹{plan.price}
               </Link>
               <p className="text-center text-gray-400 text-xs mt-2">🔒 Secure purchase · Money back guarantee</p>
@@ -175,7 +183,7 @@ export default async function PlanDetailPage({ params }: PageProps) {
             )}
 
             {/* Features */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
               <h3 className="font-bold text-gray-800 mb-4">✨ Features & Amenities</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {plan.has_balcony && <div className="flex items-center gap-2 text-sm text-gray-700"><span>🪟</span> Balcony</div>}
@@ -191,6 +199,9 @@ export default async function PlanDetailPage({ params }: PageProps) {
                 {plan.has_open_courtyard && <div className="flex items-center gap-2 text-sm text-gray-700"><span>🏛️</span> Open Courtyard</div>}
               </div>
             </div>
+
+            {/* Reviews Section */}
+            <ReviewSection planId={id} reviews={reviews || []} />
           </div>
         </div>
       </main>
