@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 export default function UploadPlanPage() {
+  const [architectId, setArchitectId] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -27,7 +28,6 @@ export default function UploadPlanPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
-  // Extra Rooms
   const [hasBalcony, setHasBalcony] = useState(false);
   const [hasPoojaRoom, setHasPoojaRoom] = useState(false);
   const [hasServantRoom, setHasServantRoom] = useState(false);
@@ -35,17 +35,21 @@ export default function UploadPlanPage() {
   const [hasHomeTheatre, setHasHomeTheatre] = useState(false);
   const [hasGym, setHasGym] = useState(false);
   const [hasStoreRoom, setHasStoreRoom] = useState(false);
-
-  // Outdoor Features
   const [hasTerrace, setHasTerrace] = useState(false);
   const [hasGarden, setHasGarden] = useState(false);
   const [hasSwimmingPool, setHasSwimmingPool] = useState(false);
   const [hasOpenCourtyard, setHasOpenCourtyard] = useState(false);
-
-  // Special Features
   const [isVastuCompliant, setIsVastuCompliant] = useState(false);
   const [isGreenBuilding, setIsGreenBuilding] = useState(false);
   const [isSolarReady, setIsSolarReady] = useState(false);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setArchitectId(user.id);
+    };
+    getUser();
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -100,6 +104,7 @@ export default function UploadPlanPage() {
       is_vastu_compliant: isVastuCompliant, is_green_building: isGreenBuilding,
       is_solar_ready: isSolarReady,
       price: parseInt(price), status: "pending", image_url,
+      architect_id: architectId,
     });
 
     if (error) { setError(error.message); setLoading(false); return; }
@@ -232,7 +237,10 @@ export default function UploadPlanPage() {
                   <option value="South Facing">South Facing</option>
                   <option value="East Facing">East Facing</option>
                   <option value="West Facing">West Facing</option>
-                  <option value="Corner Plot">Corner Plot</option>
+                  <option value="Corner Plot (North East)">Corner Plot (North East)</option>
+                  <option value="Corner Plot (North West)">Corner Plot (North West)</option>
+                  <option value="Corner Plot (South East)">Corner Plot (South East)</option>
+                  <option value="Corner Plot (South West)">Corner Plot (South West)</option>
                 </select>
               </div>
               <div>
