@@ -3,61 +3,34 @@ import Image from "next/image";
 
 export default function Navbar() {
   return (
-    <nav className="bg-white px-8 py-3 flex items-center justify-between shadow-md border-b-4 border-orange-500">
-      {/* Logo + Tagline */}
-      <Link href="/" className="flex items-center gap-3">
-        <Image
-          src="/logo.png"
-          alt="NakshaKart Logo"
-          width={65}
-          height={65}
-          priority
-        />
-        <div className="flex flex-col">
-          <span className="text-2xl font-bold text-teal-700">
+    <nav className="bg-white px-8 py-4 flex items-center justify-between shadow-sm border-b-4 border-orange-500">
+      <div className="flex items-center gap-3">
+        <Image src="/logo.png" alt="NakshaKart Logo" width={50} height={50} />
+        <div>
+          <h1 className="text-xl font-bold text-teal-700">
             Naksha<span className="text-orange-500">Kart</span>
-          </span>
-          <span className="text-[10px] text-orange-400 tracking-widest uppercase font-medium">
-            blueprints to reality
-          </span>
+          </h1>
+          <p className="text-xs text-orange-400">BLUEPRINTS TO REALITY</p>
         </div>
-      </Link>
+      </div>
 
-      {/* Nav Buttons */}
-      <div className="flex gap-3 items-center">
-        <Link
-          href="/"
-          className="px-5 py-2 rounded-full text-sm font-semibold bg-orange-500 text-white hover:bg-orange-600 transition shadow"
-        >
+      <div className="flex items-center gap-3">
+        <Link href="/" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition">
           Home
         </Link>
-        <Link
-          href="/"
-          className="px-5 py-2 rounded-full text-sm font-semibold bg-orange-500 text-white hover:bg-orange-600 transition shadow"
-        >
+        <Link href="/browse" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition">
           Browse Plans
         </Link>
-        <Link
-          href="/"
-          className="px-5 py-2 rounded-full text-sm font-semibold bg-orange-500 text-white hover:bg-orange-600 transition shadow"
-        >
+        <Link href="/contact" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition">
           Contact Us
         </Link>
+      </div>
 
-        {/* Divider */}
-        <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-        {/* Auth Buttons */}
-        <Link
-          href="/login"
-          className="px-5 py-2 rounded-full text-sm font-semibold border-2 border-teal-600 text-teal-600 hover:bg-teal-50 transition"
-        >
+      <div className="flex items-center gap-3">
+        <Link href="/login" className="border-2 border-teal-600 text-teal-600 hover:bg-teal-50 px-4 py-2 rounded-full text-sm font-medium transition">
           Login
         </Link>
-        <Link
-          href="/signup"
-          className="px-5 py-2 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700 transition shadow"
-        >
+        <Link href="/signup" className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-full text-sm font-medium transition">
           Sign Up
         </Link>
       </div>
