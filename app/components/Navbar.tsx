@@ -124,12 +124,16 @@ export default function Navbar() {
         </div>
       </div>
 
+      {/* Bottom Nav */}
       <div className="px-8 py-2 flex items-center gap-3 border-t border-gray-100">
         <Link href="/" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-full text-sm font-medium transition">
           Home
         </Link>
         <Link href="/browse" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-full text-sm font-medium transition">
           Browse Plans
+        </Link>
+        <Link href="/calculator" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-full text-sm font-medium transition">
+          🧱 Calculator
         </Link>
         <Link href="/about" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-full text-sm font-medium transition">
           About Us

@@ -1,17 +1,23 @@
+"use client";
+import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { redirect } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
+export default function ApprovePlan() {
+  const { id } = useParams();
+  const router = useRouter();
 
-export default async function ApprovePlan({ params }: PageProps) {
-  const { id } = await params;
+  useEffect(() => {
+    const run = async () => {
+      await supabase.from("plans").update({ status: "approved" }).eq("id", id);
+      router.push("/admin/plans");
+    };
+    run();
+  }, []);
 
-  await supabase
-    .from("plans")
-    .update({ status: "approved" })
-    .eq("id", id);
-
-  redirect("/admin/plans");
+  return (
+    <div className="min-h-screen flex items-center justify-center text-gray-500">
+      Approving plan...
+    </div>
+  );
 }

@@ -1,167 +1,259 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
-export default function SignupPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("customer");
+const designerTypes = [
+  "Licensed Architect",
+  "Civil Engineer",
+  "Interior Designer",
+  "3D Designer",
+  "Draftsman",
+];
+
+const inputCls = "w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500";
+
+export default function Signup() {
+  const router = useRouter();
+  const [role, setRole] = useState<"customer" | "architect">("customer");
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    phone: "",
+    designer_type: "Licensed Architect",
+    city: "",
+    state: "",
+  });
+
+  const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  const handleNext = () => {
+    if (!form.name || !form.email || !form.password || !form.confirmPassword) {
+      setError("Please fill all fields");
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    setError("");
+    setStep(2);
+  };
+
+  const handleSubmit = async () => {
+    if (role === "architect") {
+      if (!form.phone || !form.city || !form.state) {
+        setError("Please fill all fields");
+        return;
+      }
+    }
     setLoading(true);
     setError("");
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
+    const needsApproval = role === "architect" &&
+      (form.designer_type === "3D Designer" || form.designer_type === "Draftsman");
+
+    const { data, error: signupError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
       options: {
         data: {
-          full_name: name,
-          role: role,
+          full_name: form.name,
+          role,
+          phone: form.phone,
+          designer_type: form.designer_type,
+          city: form.city,
+          state: form.state,
+          account_status: needsApproval ? "pending" : "active",
         },
       },
     });
 
-    if (error) {
-      setError(error.message);
+    if (signupError) {
+      setError(signupError.message);
       setLoading(false);
       return;
     }
 
-    setSuccess(true);
+    if (data.user) {
+      await supabase.from("users").upsert({
+        id: data.user.id,
+        name: form.name,
+        email: form.email,
+        role,
+        phone: form.phone,
+        designer_type: form.designer_type,
+        city: form.city,
+        state: form.state,
+        account_status: needsApproval ? "pending" : "active",
+      });
+    }
+
     setLoading(false);
+
+    if (needsApproval) {
+      alert("✅ Account created! Since you registered as a " + form.designer_type + ", your account needs admin approval. You'll be notified once approved.");
+      router.push("/login");
+    } else if (role === "architect") {
+      alert("✅ Account created! Please complete your profile to start uploading plans.");
+      router.push("/architect/dashboard");
+    } else {
+      router.push("/browse");
+    }
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-8 text-center">
-          <div className="text-5xl mb-4">📧</div>
-          <h2 className="text-2xl font-bold text-teal-700 mb-2">Check your email!</h2>
-          <p className="text-gray-500 mb-6">
-            We sent a verification link to <strong>{email}</strong>. Please verify your account to continue.
-          </p>
-          <Link
-            href="/login"
-            className="block w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition text-center"
-          >
-            Go to Login
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
       <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-8">
-        <div className="flex flex-col items-center mb-8">
-          <Image src="/logo.png" alt="NakshaKart" width={80} height={80} />
-          <h1 className="text-2xl font-bold text-teal-700 mt-2">
-            Naksha<span className="text-orange-500">Kart</span>
+
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold">
+            <span className="text-teal-600">Naksha</span>
+            <span className="text-orange-500">Kart</span>
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Create your account</p>
+          <p className="text-gray-500 text-sm mt-1">Create your account</p>
+        </div>
+
+        {/* Role Selector */}
+        <div className="flex gap-3 mb-6">
+          <button onClick={() => { setRole("customer"); setStep(1); }}
+            className={`flex-1 py-3 rounded-xl font-semibold text-sm border-2 transition ${
+              role === "customer"
+                ? "bg-teal-600 border-teal-600 text-white"
+                : "bg-white border-gray-200 text-gray-600 hover:border-teal-400"
+            }`}>
+            🏠 I'm a Customer
+          </button>
+          <button onClick={() => { setRole("architect"); setStep(1); }}
+            className={`flex-1 py-3 rounded-xl font-semibold text-sm border-2 transition ${
+              role === "architect"
+                ? "bg-teal-600 border-teal-600 text-white"
+                : "bg-white border-gray-200 text-gray-600 hover:border-teal-400"
+            }`}>
+            📐 I'm a Designer
+          </button>
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
             {error}
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <button
-            type="button"
-            onClick={() => setRole("customer")}
-            className={`py-3 rounded-xl text-sm font-semibold border-2 transition ${
-              role === "customer"
-                ? "border-teal-600 bg-teal-50 text-teal-700"
-                : "border-gray-200 text-gray-500"
-            }`}
-          >
-            👤 I am a Customer
-          </button>
-          <button
-            type="button"
-            onClick={() => setRole("architect")}
-            className={`py-3 rounded-xl text-sm font-semibold border-2 transition ${
-              role === "architect"
-                ? "border-orange-500 bg-orange-50 text-orange-600"
-                : "border-gray-200 text-gray-500"
-            }`}
-          >
-            🏗️ I am an Architect
-          </button>
-        </div>
+        {/* STEP 1 - Basic Info */}
+        {step === 1 && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <input type="text" value={form.name} onChange={(e) => set("name", e.target.value)}
+                placeholder="Your full name" autoComplete="off" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+              <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
+                placeholder="your@email.com" autoComplete="off" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)}
+                placeholder="Min 6 characters" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+              <input type="password" value={form.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)}
+                placeholder="Repeat password" className={inputCls} />
+            </div>
 
-        <form onSubmit={handleSignup} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
-              required
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
+            {role === "customer" ? (
+              <button onClick={handleSubmit} disabled={loading}
+                className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 text-white py-3 rounded-xl font-bold transition">
+                {loading ? "Creating Account..." : "Create Account →"}
+              </button>
+            ) : (
+              <button onClick={handleNext}
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-xl font-bold transition">
+                Next → Professional Details
+              </button>
+            )}
           </div>
+        )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
+        {/* STEP 2 - Architect Professional Details */}
+        {step === 2 && role === "architect" && (
+          <div className="space-y-4">
+            <div className="bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-700 mb-2">
+              📐 Tell us about your professional background
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">I am a *</label>
+              <select value={form.designer_type} onChange={(e) => set("designer_type", e.target.value)} className={inputCls}>
+                {designerTypes.map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+
+            {(form.designer_type === "3D Designer" || form.designer_type === "Draftsman") && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 text-sm text-yellow-800">
+                ⚠️ As a <strong>{form.designer_type}</strong>, your account will require admin approval before you can upload plans. You'll need to upload sample works in your profile after signup.
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+              <input type="text" inputMode="numeric" value={form.phone}
+                onChange={(e) => set("phone", e.target.value)}
+                placeholder="+91 98765 43210" autoComplete="off" className={inputCls} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                <input type="text" value={form.city} onChange={(e) => set("city", e.target.value)}
+                  placeholder="e.g. Hyderabad" autoComplete="off" className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
+                <input type="text" value={form.state} onChange={(e) => set("state", e.target.value)}
+                  placeholder="e.g. Telangana" autoComplete="off" className={inputCls} />
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-xs text-gray-600">
+              <p className="font-semibold mb-1">📋 By creating an account you agree:</p>
+              <p>• Not to solicit customers outside NakshaKart for plans listed on this platform</p>
+              <p>• NakshaKart keeps 20% commission on all sales</p>
+              <p>• ₹100 platform fee per plan after admin approval</p>
+              <p>• Plans must be original work — no copyright violations</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setStep(1)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold transition">
+                ← Back
+              </button>
+              <button onClick={handleSubmit} disabled={loading}
+                className="flex-1 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 text-white py-3 rounded-xl font-bold transition">
+                {loading ? "Creating..." : "Create Account ✓"}
+              </button>
+            </div>
           </div>
+        )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              minLength={6}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
-            <p className="text-xs text-gray-400 mt-1">Minimum 6 characters</p>
-          </div>
-
-          <div className="flex items-start gap-2 text-sm text-gray-600">
-            <input type="checkbox" required className="mt-1" />
-            <span>
-              I agree to the{" "}
-              <Link href="/terms" className="text-teal-600 hover:underline">Terms & Conditions</Link>
-              {" "}and{" "}
-              <Link href="/privacy" className="text-teal-600 hover:underline">Privacy Policy</Link>
-            </span>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition disabled:opacity-50"
-          >
-            {loading ? "Creating account..." : "Create Account"}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-600 mt-6">
+        <p className="text-center text-sm text-gray-500 mt-6">
           Already have an account?{" "}
-          <Link href="/login" className="text-orange-500 font-semibold hover:underline">Login</Link>
+          <Link href="/login" className="text-teal-600 font-semibold hover:underline">Login</Link>
         </p>
       </div>
     </div>
