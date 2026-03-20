@@ -308,6 +308,10 @@ export default function Navbar() {
           className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-full text-sm font-medium transition">
           Contact Us
         </Link>
+        <Link href="/tenders"
+          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-full text-sm font-medium transition">
+          📋 Tenders
+        </Link>
       </div>
     </nav>
   );
