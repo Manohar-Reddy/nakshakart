@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import WishlistButton from "../components/WishlistButton";
 
 export default async function BrowsePlansPage({
   searchParams,
@@ -259,7 +260,7 @@ export default async function BrowsePlansPage({
                       <div key={plan.id}
                         className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group">
 
-                        {/* Image */}
+                       {/* Image */}
                         <div className="relative overflow-hidden">
                           {thumb ? (
                             <img src={thumb} alt={plan.title}
@@ -277,12 +278,15 @@ export default async function BrowsePlansPage({
                             </span>
                           )}
 
-                          {/* 3D badge */}
-                          {plan.model_3d_url && (
-                            <span className="absolute top-2 right-2 bg-purple-600 text-white px-2 py-0.5 rounded-full text-xs font-semibold shadow-sm">
-                              🏠 3D
-                            </span>
-                          )}
+                          {/* Wishlist + 3D badges */}
+                          <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                            <WishlistButton planId={plan.id} size="sm" />
+                            {plan.model_3d_url && (
+                              <span className="bg-purple-600 text-white px-2 py-0.5 rounded-full text-xs font-semibold shadow-sm">
+                                🏠 3D
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div className="p-4">

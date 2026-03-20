@@ -6,6 +6,7 @@ import ImageViewer from "@/app/components/ImageViewer";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 import ModelViewerClient from "@/app/components/ModelViewerClient";
+import WishlistButton from "@/app/components/WishlistButton";
 
 export default async function PlanPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -164,7 +165,10 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
                   Plan ID: {plan.plan_code}
                 </p>
               )}
-              <h1 className="text-2xl font-bold text-gray-800 leading-tight">{plan.title}</h1>
+              <div className="flex items-start justify-between gap-3">
+                <h1 className="text-2xl font-bold text-gray-800 leading-tight">{plan.title}</h1>
+                <WishlistButton planId={plan.id} size="lg" />
+              </div>
               {plan.category && (
                 <span className="inline-block mt-2 bg-teal-100 text-teal-700 px-3 py-1 rounded-full text-xs font-semibold">
                   {plan.category}

@@ -251,10 +251,16 @@ export default function Navbar() {
               </div>
 
               {role === "customer" && (
-                <Link href="/my-purchases"
-                  className="border-2 border-orange-500 text-orange-500 hover:bg-orange-50 px-3 py-1.5 rounded-full text-sm font-medium transition">
-                  My Purchases
-                </Link>
+                <>
+                  <Link href="/wishlist"
+                    className="border-2 border-red-400 text-red-400 hover:bg-red-50 px-3 py-1.5 rounded-full text-sm font-medium transition">
+                    ❤️ Wishlist
+                  </Link>
+                  <Link href="/my-purchases"
+                    className="border-2 border-orange-500 text-orange-500 hover:bg-orange-50 px-3 py-1.5 rounded-full text-sm font-medium transition">
+                    My Purchases
+                  </Link>
+                </>
               )}
               <Link href={getDashboardLink()}
                 className="border-2 border-teal-600 text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-full text-sm font-medium transition">
