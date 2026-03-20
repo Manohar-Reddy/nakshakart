@@ -18,6 +18,10 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
 
   if (!plan) notFound();
 
+  // Only show live plans to public — admin/architect can still preview
+  // We show the plan but disable buy if not live
+  const isLive = plan.status === "live";
+
   let architect = null;
   if (plan.architect_id) {
     const { data: architectData } = await supabase
@@ -70,13 +74,34 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
     <>
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <Link href="/browse" className="text-teal-600 hover:underline text-sm mb-6 inline-block">
-          ← Back to all plans
-        </Link>
+        <div className="flex items-center gap-3 mb-6">
+          <Link href="/browse" className="text-teal-600 hover:underline text-sm">
+            ← Back to all plans
+          </Link>
+          {/* Status badge for non-live plans */}
+          {!isLive && (
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+              plan.status === "pending"         ? "bg-yellow-100 text-yellow-700" :
+              plan.status === "payment_pending" ? "bg-blue-100 text-blue-700"    :
+              plan.status === "rejected"        ? "bg-red-100 text-red-700"      :
+              "bg-gray-100 text-gray-600"
+            }`}>
+              {plan.status === "pending"         ? "⏳ Pending Review — Preview Only" :
+               plan.status === "payment_pending" ? "💳 Awaiting Payment — Preview Only" :
+               plan.status === "rejected"        ? "❌ Rejected — Preview Only" :
+               "Preview Only"}
+            </span>
+          )}
+          {isLive && (
+            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
+              🟢 Live on Marketplace
+            </span>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
 
-          {/* Left — Image + 3D Viewer */}
+          {/* ── Left — Image + 3D ── */}
           <div>
             {hasExterior ? (
               <ImageViewer
@@ -101,18 +126,43 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
               <div className="mt-5">
                 <div className="flex items-center gap-2 mb-2">
                   <h3 className="font-bold text-gray-800 text-sm">🏠 3D Model Viewer</h3>
-                  <span className="bg-purple-100 text-purple-600 text-xs px-2 py-0.5 rounded-full font-semibold">Premium</span>
+                  <span className="bg-purple-100 text-purple-600 text-xs px-2 py-0.5 rounded-full font-semibold">
+                    Premium
+                  </span>
                 </div>
                 <ModelViewerClient url={plan.model_3d_url} />
               </div>
             )}
+
+            {/* Plot dimensions */}
+            {(plan.plot_width && plan.plot_depth) && (
+              <div className="mt-4 bg-teal-50 border border-teal-200 rounded-xl p-4">
+                <p className="text-sm font-bold text-teal-700 mb-2">📐 Plot Dimensions</p>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="bg-white rounded-lg p-2">
+                    <p className="text-lg font-bold text-teal-700">{plan.plot_width}</p>
+                    <p className="text-xs text-gray-500">Width ({plan.plot_unit || "ft"})</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-2">
+                    <p className="text-lg font-bold text-teal-700">{plan.plot_depth}</p>
+                    <p className="text-xs text-gray-500">Depth ({plan.plot_unit || "ft"})</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-2">
+                    <p className="text-lg font-bold text-teal-700">{plan.plot_area || (plan.plot_width * plan.plot_depth)}</p>
+                    <p className="text-xs text-gray-500">Area (sq{plan.plot_unit || "ft"})</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Right — Details */}
+          {/* ── Right — Details ── */}
           <div>
             <div className="mb-4">
               {plan.plan_code && (
-                <p className="text-xs text-teal-600 font-semibold mb-1">Plan ID: {plan.plan_code}</p>
+                <p className="text-xs text-teal-600 font-semibold mb-1 font-mono">
+                  Plan ID: {plan.plan_code}
+                </p>
               )}
               <h1 className="text-2xl font-bold text-gray-800 leading-tight">{plan.title}</h1>
               {plan.category && (
@@ -142,22 +192,44 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
                   )}
                 </div>
               ) : (
-                <p className="text-3xl font-bold text-orange-500">₹{plan.price?.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-orange-500">
+                  ₹{plan.price?.toLocaleString()}
+                </p>
               )}
-              <p className="text-xs text-green-600 mt-1">✅ Architect Verified · Instant download after purchase</p>
+              <p className="text-xs text-green-600 mt-1">
+                ✅ Architect Verified · Instant download after purchase
+              </p>
             </div>
 
             {plan.description && (
               <p className="text-gray-600 text-sm mb-5 leading-relaxed">{plan.description}</p>
             )}
 
-            <Link href={`/buy/${plan.id}`}
-              className="block w-full bg-orange-500 hover:bg-orange-600 text-white text-center py-4 rounded-xl font-bold text-lg transition mb-3">
-              Buy Plan →
-            </Link>
-            <p className="text-center text-xs text-gray-400 mb-5">
-              🔒 Secure purchase · No refunds on digital products
-            </p>
+            {/* Buy Button — only for live plans */}
+            {isLive ? (
+              <>
+                <Link href={`/buy/${plan.id}`}
+                  className="block w-full bg-orange-500 hover:bg-orange-600 text-white text-center py-4 rounded-xl font-bold text-lg transition mb-3">
+                  🛒 Buy Plan →
+                </Link>
+                <p className="text-center text-xs text-gray-400 mb-5">
+                  🔒 Secure purchase · No refunds on digital products
+                </p>
+              </>
+            ) : (
+              <div className="bg-gray-100 border-2 border-gray-200 rounded-xl py-4 px-4 text-center mb-5">
+                <p className="text-gray-500 font-semibold text-sm">
+                  {plan.status === "pending"         ? "⏳ This plan is under review — not available for purchase yet" :
+                   plan.status === "payment_pending" ? "💳 Architect is setting up payment — coming soon!" :
+                   plan.status === "rejected"        ? "❌ This plan is not available" :
+                   "This plan is not available for purchase"}
+                </p>
+                <Link href="/browse"
+                  className="text-teal-600 hover:underline text-xs mt-2 inline-block">
+                  Browse other plans →
+                </Link>
+              </div>
+            )}
 
             {/* Modification */}
             {plan.modification_available ? (
@@ -172,7 +244,9 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
                 {plan.turnaround_time && (
                   <p className="text-xs text-gray-500 mt-1">⏱️ Turnaround: {plan.turnaround_time}</p>
                 )}
-                <p className="text-xs text-gray-400 mt-2">* Consultation available after purchase through NakshaKart only</p>
+                <p className="text-xs text-gray-400 mt-2">
+                  * Consultation available after purchase through NakshaKart only
+                </p>
               </div>
             ) : (
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-5">
@@ -184,14 +258,14 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
             <h2 className="font-bold text-gray-800 text-lg mb-3">Plan Specifications</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
               {[
-                { icon: "📐", label: "Plot Size",  value: plan.plot_size     },
-                { icon: "🛏️", label: "Bedrooms",   value: plan.bedrooms      },
-                { icon: "🚿", label: "Bathrooms",  value: plan.bathrooms     },
-                { icon: "🏢", label: "Floors",     value: plan.floors        },
-                { icon: "🚗", label: "Parking",    value: plan.parking       },
-                { icon: "📏", label: "Built-up",   value: plan.built_up_area },
-                { icon: "🧭", label: "Facing",     value: plan.road_facing   },
-                { icon: "⬛", label: "Plot Shape", value: plan.plot_shape    },
+                { icon: "📐", label: "Plot Size",     value: plan.plot_size     },
+                { icon: "🛏️", label: "Bedrooms",      value: plan.bedrooms      },
+                { icon: "🚿", label: "Bathrooms",     value: plan.bathrooms     },
+                { icon: "🏢", label: "Floors",        value: plan.floors        },
+                { icon: "🚗", label: "Parking",       value: plan.parking       },
+                { icon: "📏", label: "Built-up Area", value: plan.built_up_area },
+                { icon: "🧭", label: "Road Facing",   value: plan.road_facing   },
+                { icon: "⬛", label: "Plot Shape",    value: plan.plot_shape    },
               ].filter((s) => s.value).map((spec) => (
                 <div key={spec.label} className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
                   <p className="text-xl mb-1">{spec.icon}</p>
@@ -207,7 +281,8 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
                 <h2 className="font-bold text-gray-800 text-lg mb-3">Special Features</h2>
                 <div className="flex flex-wrap gap-2">
                   {features.map((f) => (
-                    <span key={f.key} className="bg-teal-50 border border-teal-200 text-teal-700 px-3 py-1.5 rounded-full text-xs font-semibold">
+                    <span key={f.key}
+                      className="bg-teal-50 border border-teal-200 text-teal-700 px-3 py-1.5 rounded-full text-xs font-semibold">
                       {f.icon} {f.label}
                     </span>
                   ))}
@@ -241,9 +316,13 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-bold text-purple-700 text-sm">⭐ Premium Package Files</p>
-                      <span className="bg-purple-100 text-purple-600 text-xs px-2 py-0.5 rounded-full font-semibold">Basic +</span>
+                      <span className="bg-purple-100 text-purple-600 text-xs px-2 py-0.5 rounded-full font-semibold">
+                        Basic +
+                      </span>
                     </div>
-                    <span className="text-purple-600 font-bold text-sm">₹{plan.premium_price?.toLocaleString()}</span>
+                    <span className="text-purple-600 font-bold text-sm">
+                      ₹{plan.premium_price?.toLocaleString()}
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-1.5">
                     {premiumFiles.map((file) => (
@@ -275,7 +354,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
 
         {/* Architect Info */}
         {architect && (
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 mt-8">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 mt-8 shadow-sm">
             <h2 className="font-bold text-gray-800 text-lg mb-4">👤 About the Designer</h2>
             <div className="flex items-start gap-4">
               <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center font-bold text-teal-600 text-xl overflow-hidden flex-shrink-0">
@@ -289,13 +368,17 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-bold text-gray-800">{architect.name}</p>
                   {architect.is_coa_verified && (
-                    <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold">✅ CoA Verified</span>
+                    <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold">
+                      ✅ CoA Verified
+                    </span>
                   )}
                   {architect.designer_type && (
-                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">{architect.designer_type}</span>
+                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                      {architect.designer_type}
+                    </span>
                   )}
                 </div>
-                {architect.city && <p className="text-xs text-gray-500 mt-0.5">📍 {architect.city}</p>}
+                {architect.city       && <p className="text-xs text-gray-500 mt-0.5">📍 {architect.city}</p>}
                 {architect.experience && <p className="text-xs text-gray-500">🏆 {architect.experience} years experience</p>}
                 <Link href={`/architect-profile/${architect.id}`}
                   className="text-teal-600 hover:underline text-xs font-semibold mt-2 inline-block">
@@ -306,9 +389,12 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
           </div>
         )}
 
-        <div id="reviews" className="mt-8">
-          <ReviewSection planId={id} />
-        </div>
+        {/* Reviews */}
+        {isLive && (
+          <div id="reviews" className="mt-8">
+            <ReviewSection planId={id} />
+          </div>
+        )}
       </div>
       <Footer />
     </>
