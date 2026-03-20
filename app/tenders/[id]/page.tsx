@@ -101,8 +101,7 @@ export default function TenderDetailPage() {
     userRole !== "customer" &&
     !isOwner &&
     !myBid &&
-    tender.status === "open" &&
-    tender.profession_needed?.includes(user.user_metadata?.profession || userRole);
+    tender.status === "open";
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">

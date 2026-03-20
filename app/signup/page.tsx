@@ -4,78 +4,79 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const designerTypes = [
-  "Licensed Architect",
-  "Civil Engineer",
-  "Interior Designer",
-  "3D Designer",
-  "Draftsman",
+const PROFESSIONS = [
+  { key: "Architect",              icon: "🏠", label: "Architect",              desc: "Licensed architect / house plan designer"    },
+  { key: "Civil Contractor",       icon: "🏗️", label: "Civil Contractor",       desc: "Building construction & execution"           },
+  { key: "Interior Designer",      icon: "🪑", label: "Interior Designer",       desc: "Interior spaces & décor"                    },
+  { key: "Structural Engineer",    icon: "⚙️", label: "Structural Engineer",     desc: "Structural design & analysis"               },
+  { key: "Geo Technical Services", icon: "🌍", label: "Geo Technical Services",  desc: "Soil testing & geo technical surveys"       },
+  { key: "3D Designer",            icon: "🎨", label: "3D Designer",             desc: "3D visualization & rendering"               },
+  { key: "Draftsman",              icon: "📐", label: "Draftsman / CAD Designer", desc: "Technical drawings & CAD work"             },
 ];
 
 const inputCls = "w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500";
 
 export default function Signup() {
-  const router = useRouter();
-  const [role, setRole] = useState<"customer" | "architect">("customer");
-  const [step, setStep] = useState(1);
+  const router  = useRouter();
+  const [role,    setRole]    = useState<"customer" | "professional">("customer");
+  const [step,    setStep]    = useState(1);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error,   setError]   = useState("");
 
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
+    name:            "",
+    email:           "",
+    password:        "",
     confirmPassword: "",
-    phone: "",
-    designer_type: "Licensed Architect",
-    city: "",
-    state: "",
+    phone:           "",
+    profession:      "",
+    city:            "",
+    state:           "",
+    experience:      "",
   });
 
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
   const handleNext = () => {
     if (!form.name || !form.email || !form.password || !form.confirmPassword) {
-      setError("Please fill all fields");
-      return;
+      setError("Please fill all fields"); return;
     }
     if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
-      return;
+      setError("Passwords do not match"); return;
     }
     if (form.password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
+      setError("Password must be at least 6 characters"); return;
     }
     setError("");
     setStep(2);
   };
 
   const handleSubmit = async () => {
-    if (role === "architect") {
+    if (role === "professional") {
+      if (!form.profession) { setError("Please select your profession"); return; }
       if (!form.phone || !form.city || !form.state) {
-        setError("Please fill all fields");
-        return;
+        setError("Please fill all fields"); return;
       }
     }
     setLoading(true);
     setError("");
 
-    const needsApproval = role === "architect" &&
-      (form.designer_type === "3D Designer" || form.designer_type === "Draftsman");
+    // Architect can upload plans, others can only bid on tenders
+    const dbRole = form.profession === "Architect" ? "architect" : role === "professional" ? "architect" : "customer";
 
     const { data, error: signupError } = await supabase.auth.signUp({
-      email: form.email,
+      email:    form.email,
       password: form.password,
       options: {
         data: {
-          full_name: form.name,
-          role,
-          phone: form.phone,
-          designer_type: form.designer_type,
-          city: form.city,
-          state: form.state,
-          account_status: needsApproval ? "pending" : "active",
+          full_name:   form.name,
+          role:        dbRole,
+          profession:  form.profession || null,
+          phone:       form.phone,
+          city:        form.city,
+          state:       form.state,
+          experience:  form.experience || null,
+          account_status: "active",
         },
       },
     });
@@ -88,26 +89,27 @@ export default function Signup() {
 
     if (data.user) {
       await supabase.from("users").upsert({
-        id: data.user.id,
-        name: form.name,
-        email: form.email,
-        role,
-        phone: form.phone,
-        designer_type: form.designer_type,
-        city: form.city,
-        state: form.state,
-        account_status: needsApproval ? "pending" : "active",
+        id:         data.user.id,
+        name:       form.name,
+        email:      form.email,
+        role:       dbRole,
+        profession: form.profession || null,
+        phone:      form.phone,
+        city:       form.city,
+        state:      form.state,
+        experience: form.experience ? parseInt(form.experience) : null,
+        account_status: "active",
       });
     }
 
     setLoading(false);
 
-    if (needsApproval) {
-      alert("✅ Account created! Since you registered as a " + form.designer_type + ", your account needs admin approval. You'll be notified once approved.");
-      router.push("/login");
-    } else if (role === "architect") {
-      alert("✅ Account created! Please complete your profile to start uploading plans.");
+    if (role === "professional" && form.profession === "Architect") {
+      alert("✅ Account created! You can now upload house plans and bid on tenders.");
       router.push("/architect/dashboard");
+    } else if (role === "professional") {
+      alert("✅ Account created! You can now browse and bid on project tenders.");
+      router.push("/tenders");
     } else {
       router.push("/browse");
     }
@@ -118,7 +120,7 @@ export default function Signup() {
       <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-8">
 
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h1 className="text-2xl font-bold">
             <span className="text-teal-600">Naksha</span>
             <span className="text-orange-500">Kart</span>
@@ -128,7 +130,7 @@ export default function Signup() {
 
         {/* Role Selector */}
         <div className="flex gap-3 mb-6">
-          <button onClick={() => { setRole("customer"); setStep(1); }}
+          <button onClick={() => { setRole("customer"); setStep(1); setForm((p) => ({ ...p, profession: "" })); }}
             className={`flex-1 py-3 rounded-xl font-semibold text-sm border-2 transition ${
               role === "customer"
                 ? "bg-teal-600 border-teal-600 text-white"
@@ -136,15 +138,28 @@ export default function Signup() {
             }`}>
             🏠 I'm a Customer
           </button>
-          <button onClick={() => { setRole("architect"); setStep(1); }}
+          <button onClick={() => { setRole("professional"); setStep(1); }}
             className={`flex-1 py-3 rounded-xl font-semibold text-sm border-2 transition ${
-              role === "architect"
+              role === "professional"
                 ? "bg-teal-600 border-teal-600 text-white"
                 : "bg-white border-gray-200 text-gray-600 hover:border-teal-400"
             }`}>
-            📐 I'm a Designer
+            👷 I'm a Professional
           </button>
         </div>
+
+        {/* Role description */}
+        {role === "customer" && (
+          <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 mb-5 text-xs text-teal-700">
+            🏠 As a customer you can browse & buy house plans, post project tenders, save to wishlist and leave reviews.
+          </div>
+        )}
+        {role === "professional" && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-5 text-xs text-blue-700">
+            👷 As a professional you can bid on project tenders posted by customers.
+            {" "}<strong>Architects</strong> can also upload and sell house plans.
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
@@ -152,26 +167,26 @@ export default function Signup() {
           </div>
         )}
 
-        {/* STEP 1 - Basic Info */}
+        {/* ── STEP 1 — Basic Info ── */}
         {step === 1 && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
               <input type="text" value={form.name} onChange={(e) => set("name", e.target.value)}
                 placeholder="Your full name" autoComplete="off" className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
               <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
                 placeholder="your@email.com" autoComplete="off" className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
               <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)}
                 placeholder="Min 6 characters" className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password *</label>
               <input type="password" value={form.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)}
                 placeholder="Repeat password" className={inputCls} />
             </div>
@@ -190,23 +205,47 @@ export default function Signup() {
           </div>
         )}
 
-        {/* STEP 2 - Architect Professional Details */}
-        {step === 2 && role === "architect" && (
+        {/* ── STEP 2 — Professional Details ── */}
+        {step === 2 && role === "professional" && (
           <div className="space-y-4">
-            <div className="bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-sm text-teal-700 mb-2">
-              📐 Tell us about your professional background
-            </div>
 
+            {/* Profession selector */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">I am a *</label>
-              <select value={form.designer_type} onChange={(e) => set("designer_type", e.target.value)} className={inputCls}>
-                {designerTypes.map((t) => <option key={t}>{t}</option>)}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Your Profession *</label>
+              <div className="space-y-2">
+                {PROFESSIONS.map(({ key, icon, label, desc }) => (
+                  <label key={key} className={`flex items-center gap-3 border-2 rounded-xl px-4 py-3 cursor-pointer transition ${
+                    form.profession === key
+                      ? "border-teal-500 bg-teal-50"
+                      : "border-gray-200 hover:border-teal-300"
+                  }`}>
+                    <input type="radio" name="profession" value={key}
+                      checked={form.profession === key}
+                      onChange={() => set("profession", key)}
+                      className="accent-teal-600 flex-shrink-0" />
+                    <span className="text-xl">{icon}</span>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{label}</p>
+                      <p className="text-xs text-gray-500">{desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
 
-            {(form.designer_type === "3D Designer" || form.designer_type === "Draftsman") && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 text-sm text-yellow-800">
-                ⚠️ As a <strong>{form.designer_type}</strong>, your account will require admin approval before you can upload plans. You'll need to upload sample works in your profile after signup.
+            {/* Architect special note */}
+            {form.profession === "Architect" && (
+              <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 text-xs text-teal-700">
+                🏠 As an Architect you can upload and sell house plans + bid on tenders.
+                NakshaKart charges 20% commission on plan sales.
+              </div>
+            )}
+
+            {/* Other professions note */}
+            {form.profession && form.profession !== "Architect" && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700">
+                💼 As a {form.profession} you can browse and bid on project tenders posted by customers.
+                Pay ₹10 per bid to connect with customers.
               </div>
             )}
 
@@ -230,12 +269,22 @@ export default function Signup() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Years of Experience</label>
+              <input type="number" value={form.experience} onChange={(e) => set("experience", e.target.value)}
+                placeholder="e.g. 5" className={inputCls} />
+            </div>
+
+            {/* Terms */}
             <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-xs text-gray-600">
               <p className="font-semibold mb-1">📋 By creating an account you agree:</p>
-              <p>• Not to solicit customers outside NakshaKart for plans listed on this platform</p>
-              <p>• NakshaKart keeps 20% commission on all sales</p>
-              <p>• ₹100 platform fee per plan after admin approval</p>
-              <p>• Plans must be original work — no copyright violations</p>
+              <p>• NakshaKart is a platform only — not responsible for project outcomes</p>
+              {form.profession === "Architect" && <>
+                <p>• NakshaKart keeps 20% commission on all plan sales</p>
+                <p>• Platform fee per plan based on floors (₹99–₹499)</p>
+              </>}
+              <p>• Bid fee of ₹10 per tender is non-refundable</p>
+              <p>• All project dealings are directly between you and the customer</p>
             </div>
 
             <div className="flex gap-3">
